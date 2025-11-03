@@ -1,132 +1,72 @@
-import java.util.ArrayList;
+import java.util.*;
 
-// IMPORTANT: Il ne faut pas changer la signature des méthodes
-// de cette classe, ni le nom de la classe.
-// Vous pouvez par contre ajouter d'autres méthodes (ça devrait 
-// être le cas)
-class Player {
-    private Mark cpuMark;
-    private int numExploredNodes; // Contient le nombre de noeuds visités (le nombre d'appel à la fonction MinMax ou Alpha Beta). Normalement, la variable devrait être incrémentée au début de votre MinMax ou Alpha Beta.
+public class Player {
+    private int color;
+    private int opponentColor;
+    private int depth = 3;
 
-    // Le constructeur reçoit en paramètre le
-    // joueur MAX (X ou O)
-    public Player(Mark cpu) {
-        this.cpuMark = cpu;
-        this.numExploredNodes = 0;
+    public Player(int color) {
+        this.color = color;
+        this.opponentColor = (color == Mark.RED ? Mark.BLACK : Mark.RED);
     }
 
-    //Permet de retourner le nombre de noeuds explorés durant une recherche MinMax ou Alpha-Beta.
-    public int getNumOfExploredNodes() {
-        return numExploredNodes;
-    }
+    public Move chooseMove(Plateau board) {
+        Move bestMove = null;
+        int alpha = Integer.MIN_VALUE;
+        int beta = Integer.MAX_VALUE;
+        int bestValue = Integer.MIN_VALUE;
 
-    // Retourne la liste des coups possibles avec l'algorithme MinMax
-    //Cette liste contient plusieurs coups possibles si et seuleument si plusieurs coups ont le même score.
-    public ArrayList<Move> getNextMoveMinMax(Plateau board) {
-        numExploredNodes = 0;
-        int bestScore = Integer.MIN_VALUE;
-        ArrayList<Move> bestMoves = new ArrayList<>();
+        List<Move> moves = board.getAllPossibleMoves(color);
+        if (moves.isEmpty()) return null;
 
-        for (Move move : board.getAvailableMoves()) {
-            board.play(move, cpuMark);
-            int score = minMax(board, false);
-            board.undo(move);
-
-            if (score > bestScore) {
-                bestMoves.clear();
-                bestMoves.add(move);
-                bestScore = score;
-            } else if (score == bestScore) {
-                bestMoves.add(move);
+        for (Move m : moves) {
+            Plateau newBoard = board.copy();
+            newBoard.applyMove(m);
+            int value = minimax(newBoard, depth - 1, alpha, beta, false);
+            if (value > bestValue) {
+                bestValue = value;
+                bestMove = m;
             }
+            alpha = Math.max(alpha, value);
         }
-
-        return bestMoves;
+        return bestMove;
     }
 
-    // Retourne la liste des coups possiblesavec l'algorithme Alpha beta
-    //Cette liste contient plusieurs coups possibles si et seuleument si plusieurs coups ont le même score.
-    public ArrayList<Move> getNextMoveAB(Plateau board) {
-        numExploredNodes = 0;
-        int bestScore = Integer.MIN_VALUE;
-        ArrayList<Move> bestMoves = new ArrayList<>();
+    private int minimax(Plateau board, int depth, int alpha, int beta, boolean maximizing) {
+        if (depth == 0 || board.isConnected(color) || board.isConnected(opponentColor))
+            return evaluate(board);
 
-        for (Move move : board.getAvailableMoves()) {
-            board.play(move, cpuMark);
-            int score = alphaBeta(board, Integer.MIN_VALUE, Integer.MAX_VALUE, false);
-            board.undo(move);
-
-            if (score > bestScore) {
-                bestScore = score;
-                bestMoves.clear();
-                bestMoves.add(move);
-            } else if (score == bestScore) {
-                bestMoves.add(move);
-            }
-        }
-
-        return bestMoves;
-    }
-
-    //Cette méthode implémente la logique de l'algorithme MinMax
-    //Permet de générer l'abres des coups possibles avec un appel récursif à chaque coup
-    private int minMax(Plateau board, boolean isMaximizing) {
-        numExploredNodes++;
-        int score = board.evaluate(cpuMark);
-        if (score == 100 || score == -100 || board.getAvailableMoves().isEmpty()) {
-            return score;
-        }
-
-        if (isMaximizing) {
-            int best = Integer.MIN_VALUE;
-            for (Move move : board.getAvailableMoves()) {
-                board.play(move, cpuMark);
-                best = Math.max(best, minMax(board, false));
-                board.undo(move);
-            }
-            return best;
-        } else {
-            int best = Integer.MAX_VALUE;
-            Mark opponent = (cpuMark == Mark.X) ? Mark.O : Mark.X;
-            for (Move move : board.getAvailableMoves()) {
-                board.play(move, opponent);
-                best = Math.min(best, minMax(board, true));
-                board.undo(move);
-            }
-            return best;
-        }
-    }
-
-    //Cette méthode implémente la logique de l'algorithme Alpha Beta
-    //Permet de générer l'abres des coups possibles avec un appel récursif à chaque coup
-    private int alphaBeta(Plateau board, int alpha, int beta, boolean isMaximizing) {
-        numExploredNodes++;
-        int score = board.evaluate(cpuMark);
-        if (score == 100 || score == -100 || board.getAvailableMoves().isEmpty()) {
-            return score;
-        }
-
-        if (isMaximizing) {
-            int best = Integer.MIN_VALUE;
-            for (Move move : board.getAvailableMoves()) {
-                board.play(move, cpuMark);
-                best = Math.max(best, alphaBeta(board, alpha, beta, false));
-                board.undo(move);
-                alpha = Math.max(alpha, best);
+        if (maximizing) {
+            int maxEval = Integer.MIN_VALUE;
+            for (Move move : board.getAllPossibleMoves(color)) {
+                Plateau newBoard = board.copy();
+                newBoard.applyMove(move);
+                int eval = minimax(newBoard, depth - 1, alpha, beta, false);
+                maxEval = Math.max(maxEval, eval);
+                alpha = Math.max(alpha, eval);
                 if (beta <= alpha) break;
             }
-            return best;
+            return maxEval;
         } else {
-            int best = Integer.MAX_VALUE;
-            Mark opponent = (cpuMark == Mark.X) ? Mark.O : Mark.X;
-            for (Move move : board.getAvailableMoves()) {
-                board.play(move, opponent);
-                best = Math.min(best, alphaBeta(board, alpha, beta, true));
-                board.undo(move);
-                beta = Math.min(beta, best);
+            int minEval = Integer.MAX_VALUE;
+            for (Move move : board.getAllPossibleMoves(opponentColor)) {
+                Plateau newBoard = board.copy();
+                newBoard.applyMove(move);
+                int eval = minimax(newBoard, depth - 1, alpha, beta, true);
+                minEval = Math.min(minEval, eval);
+                beta = Math.min(beta, eval);
                 if (beta <= alpha) break;
             }
-            return best;
+            return minEval;
         }
+    }
+
+    private int evaluate(Plateau board) {
+        int myPieces = board.countPieces(color);
+        int oppPieces = board.countPieces(opponentColor);
+        int score = (myPieces - oppPieces) * 10;
+        if (board.isConnected(color)) score += 1000;
+        if (board.isConnected(opponentColor)) score -= 1000;
+        return score;
     }
 }

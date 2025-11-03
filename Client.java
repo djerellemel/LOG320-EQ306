@@ -1,114 +1,86 @@
 import java.io.*;
 import java.net.*;
 
+public class Client {
+    public static void main(String[] args) {
+        Socket MyClient;
+        BufferedInputStream input;
+        BufferedOutputStream output;
+        Player player = null;
 
-class Client {
-	public static void main(String[] args) {
-         
-	Socket MyClient;
-	BufferedInputStream input;
-	BufferedOutputStream output;
-	Plateau plateau = new Plateau();
-	Player player = null;
-	
-	try {
-		MyClient = new Socket("localhost", 8888);
+        try {
+            MyClient = new Socket("localhost", 8888);
+            input = new BufferedInputStream(MyClient.getInputStream());
+            output = new BufferedOutputStream(MyClient.getOutputStream());
 
-	   	input = new BufferedInputStream(MyClient.getInputStream());
-		output = new BufferedOutputStream(MyClient.getOutputStream());
-		BufferedReader console = new BufferedReader(new InputStreamReader(System.in));
-	   	while(true){
-			char cmd = 0;
-            cmd = (char)input.read();
-            System.out.println(cmd);
-            // Debut de la partie en joueur blanc
-            if(cmd == '1'){
-                byte[] aBuffer = new byte[1024];
-				int size = input.available();
-				//System.out.println("size " + size);
-				input.read(aBuffer,0,size);
-                String s = new String(aBuffer).trim();
-				
-				plateau = new Plateau(s);
-				plateau.printPlateau();
-				player = new Player(cmd);
+            while (true) {
+                char cmd = (char) input.read();
 
-                System.out.println(s);
+                // Début de partie (Rouge ou Noir)
+                if (cmd == '1' || cmd == '2') {
+                    byte[] aBuffer = new byte[2048];
+                    int size = input.read(aBuffer);
+                    String s = new String(aBuffer, 0, size).trim();
 
+                    Plateau plateau = new Plateau(s);
+                    plateau.printPlateau();
 
-                System.out.println("Nouvelle partie! Vous jouer blanc, entrez votre premier coup : ");
-				plateau.miniMax('O', plateau);
-                String move = plateau.moveToSend;
-				plateau.play(move, player);
-				output.write(move.getBytes(),0,move.length());
-				output.flush();
+                    int color = (cmd == '1') ? Mark.RED : Mark.BLACK;
+                    player = new Player(color);
+
+                    if (cmd == '1') {
+                        System.out.println("Vous êtes Rouge (vous commencez la partie)");
+                        Move best = player.chooseMove(plateau);
+                        System.out.println("Coup choisi : " + best);
+                        output.write(best.toString().getBytes());
+                        output.flush();
+                    } else {
+                        System.out.println("Vous êtes Noir (attendez le premier coup des rouges)");
+                    }
+                }
+
+                // Tour de jeu : le serveur envoie le dernier coup et attend la réponse
+                if (cmd == '3') {
+                    byte[] aBuffer = new byte[2048];
+                    int size = input.read(aBuffer);
+                    String s = new String(aBuffer, 0, size).trim();
+
+                    Plateau plateau = new Plateau(s);
+                    plateau.printPlateau();
+
+                    Move best = player.chooseMove(plateau);
+                    System.out.println("Coup choisi : " + best);
+                    output.write(best.toString().getBytes());
+                    output.flush();
+                }
+
+                // Coup invalide : rejouer un autre coup
+                if (cmd == '4') {
+                    System.out.println(" Coup invalide, l'IA va rejouer un nouveau coup...");
+
+                    byte[] aBuffer = new byte[2048];
+                    int size = input.read(aBuffer);
+                    String s = new String(aBuffer, 0, size).trim();
+
+                    Plateau plateau = new Plateau(s);
+                    plateau.printPlateau();
+
+                    Move best = player.chooseMove(plateau);
+                    System.out.println("Nouveau coup choisi : " + best);
+                    output.write(best.toString().getBytes());
+                    output.flush();
+                }
+
+                // Partie terminée
+                if (cmd == '5') {
+                    System.out.println(" Partie terminée !");
+                    break;
+                }
             }
-            // Debut de la partie en joueur Noir
-            if(cmd == '2'){
-                System.out.println("Nouvelle partie! Vous jouer noir, attendez le coup des blancs");
-                byte[] aBuffer = new byte[1024];
-				
-				int size = input.available();
-				//System.out.println("size " + size);
-				input.read(aBuffer,0,size);
-                String s = new String(aBuffer).trim();
-				plateau = new Plateau(s);
-				plateau.printPlateau();
-				player = new Player(cmd);
-                System.out.println(s);
 
-            }
-
-
-			// Le serveur demande le prochain coup
-			// Le message contient aussi le dernier coup joue.
-	    if(cmd == '3'){
-		byte[] aBuffer = new byte[16];
-				
-		int size = input.available();
-		System.out.println("size :" + size);
-		input.read(aBuffer,0,size);
-				
-		String s = new String(aBuffer);
-		System.out.println("Dernier coup :"+ s);
-		plateau.play(s.replaceAll("\\s", ""), player);
-
-		System.out.println("Entrez votre coup : ");
-		plateau.miniMax('O', plateau);
-		String move = plateau.moveToSend;
-		plateau.play(move, player);
-		output.write(move.getBytes(),0,move.length());
-		output.flush();
-				
-	     }
-		// Le dernier coup est invalide
-		if(cmd == '4'){
-			System.out.println("Coup invalide, entrez un nouveau coup : ");
-				String move = null;
-			move = console.readLine();
-			output.write(move.getBytes(),0,move.length());
-			output.flush();
-
-		}
-		// La partie est terminée
-	    if(cmd == '5'){
-                byte[] aBuffer = new byte[16];
-                int size = input.available();
-                input.read(aBuffer,0,size);
-		String s = new String(aBuffer);
-		System.out.println("Partie Terminé. Le dernier coup joué est: "+s);
-		String move = null;
-		move = console.readLine();
-		output.write(move.getBytes(),0,move.length());
-		output.flush();
-				
-	    }
+            MyClient.close();
+        } catch (IOException e) {
+            System.out.println("Erreur : " + e);
         }
-	}
-	catch (IOException e) {
-   		System.out.println(e);
-	}
-	
     }
 }
-
