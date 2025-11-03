@@ -3,70 +3,92 @@ import java.util.*;
 public class Player {
     private int color;
     private int opponentColor;
-    private int depth = 3;
+    private long timeLimit = 1000; // 1 seconde max par coup
+    private long startTime;
 
     public Player(int color) {
         this.color = color;
         this.opponentColor = (color == Mark.RED ? Mark.BLACK : Mark.RED);
     }
 
+    // ------------------ CHOIX DU COUP ------------------
     public Move chooseMove(Plateau board) {
-        Move bestMove = null;
-        int alpha = Integer.MIN_VALUE;
-        int beta = Integer.MAX_VALUE;
+        startTime = System.currentTimeMillis();
+        List<Move> moves = board.getAllPossibleMoves(color);
+
+        if (moves == null || moves.isEmpty()) {
+            System.out.println("Aucun coup possible pour " + (color == Mark.RED ? "rouge" : "noir"));
+            return null;
+        }
+
+        System.out.println("Nombre de mouvements possibles : " + moves.size());
+
+        Move bestMove = moves.get(0);
         int bestValue = Integer.MIN_VALUE;
 
-        List<Move> moves = board.getAllPossibleMoves(color);
-        if (moves.isEmpty()) return null;
-
         for (Move m : moves) {
-            Plateau newBoard = board.copy();
-            newBoard.applyMove(m);
-            int value = minimax(newBoard, depth - 1, alpha, beta, false);
+            if (isTimeUp()) break;
+
+            // Sauvegarde de l'état avant d'appliquer le coup
+            int fromX = m.getFromX(), fromY = m.getFromY();
+            int toX = m.getToX(), toY = m.getToY();
+            int piece = board.getCell(fromX, fromY);
+            int captured = board.getCell(toX, toY);
+
+            // Joue le coup temporairement
+            board.applyMove(m);
+
+            // Évalue la position
+            int value = evaluate(board);
+
+            // Annule le coup
+            board.setCell(fromX, fromY, piece);
+            board.setCell(toX, toY, captured);
+
             if (value > bestValue) {
                 bestValue = value;
                 bestMove = m;
             }
-            alpha = Math.max(alpha, value);
         }
+
         return bestMove;
     }
 
-    private int minimax(Plateau board, int depth, int alpha, int beta, boolean maximizing) {
-        if (depth == 0 || board.isConnected(color) || board.isConnected(opponentColor))
-            return evaluate(board);
-
-        if (maximizing) {
-            int maxEval = Integer.MIN_VALUE;
-            for (Move move : board.getAllPossibleMoves(color)) {
-                Plateau newBoard = board.copy();
-                newBoard.applyMove(move);
-                int eval = minimax(newBoard, depth - 1, alpha, beta, false);
-                maxEval = Math.max(maxEval, eval);
-                alpha = Math.max(alpha, eval);
-                if (beta <= alpha) break;
-            }
-            return maxEval;
-        } else {
-            int minEval = Integer.MAX_VALUE;
-            for (Move move : board.getAllPossibleMoves(opponentColor)) {
-                Plateau newBoard = board.copy();
-                newBoard.applyMove(move);
-                int eval = minimax(newBoard, depth - 1, alpha, beta, true);
-                minEval = Math.min(minEval, eval);
-                beta = Math.min(beta, eval);
-                if (beta <= alpha) break;
-            }
-            return minEval;
-        }
-    }
-
+    // ------------------ ÉVALUATION SIMPLE ------------------
     private int evaluate(Plateau board) {
         int myPieces = board.countPieces(color);
         int oppPieces = board.countPieces(opponentColor);
         int score = (myPieces - oppPieces) * 10;
-        if (board.isConnected(color)) score += 1000;
-        if (board.isConnected(opponentColor)) score -= 1000;
+
+        // Bonus de cohésion
+        score -= computeCohesion(board, color) / 2;
+
+        // Pas besoin de test de connectivité ici (trop lent pour le PC1)
         return score;
+    }
+
+    // ------------------ COHÉSION ------------------
+    private int computeCohesion(Plateau board, int color) {
+        List<int[]> pieces = new ArrayList<>();
+        for (int y = 0; y < 8; y++) {
+            for (int x = 0; x < 8; x++) {
+                if (board.getCell(x, y) == color)
+                    pieces.add(new int[]{x, y});
+            }
+        }
+
+        if (pieces.size() < 2) return 0;
+
+        int total = 0;
+        for (int i = 0; i < pieces.size() - 1; i++) {
+            int dx = Math.abs(pieces.get(i)[0] - pieces.get(i + 1)[0]);
+            int dy = Math.abs(pieces.get(i)[1] - pieces.get(i + 1)[1]);
+            total += Math.max(dx, dy);
+        }
+        return total;
+    }
+
+    private boolean isTimeUp() {
+        return (System.currentTimeMillis() - startTime) > timeLimit;
     }
 }
