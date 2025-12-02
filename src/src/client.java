@@ -14,7 +14,7 @@ class Client {
 		try {
 			System.out.println("Veillez entré l'adresse du serveur: ");
 			
-			MyClient = new Socket("localhost", 8888);
+			MyClient = new Socket(ipv4, 8888);
 
 			input = new BufferedInputStream(MyClient.getInputStream());
 			output = new BufferedOutputStream(MyClient.getOutputStream());
