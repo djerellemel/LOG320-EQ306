@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="LOG320-EQ306:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/LOG320_EQ306_jar</output-path>
+    <root id="archive" name="LOG320-EQ306.jar">
+      <element id="module-output" name="LOG320-EQ306" />
+    </root>
+  </artifact>
+</component>

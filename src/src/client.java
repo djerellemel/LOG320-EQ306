@@ -54,13 +54,33 @@ class Client {
             Scanner scanner = new Scanner(System.in);
             System.out.print("Entrez l'adresse IP du serveur (par défaut: localhost) : ");
             String serverIP = scanner.nextLine().trim();
+
+            //Scanner scanner = new Scanner(System.in);
+            System.out.print("Entrez le port du serveur (par défaut: 8888) : ");
+            String port = scanner.nextLine().trim();
+            int serverPort;
+            if (port.isEmpty()) {
+                serverPort = 8888; // Default to localhost if no input
+            }
+            else{
+                try {
+                    serverPort = Integer.parseInt(port);
+                    if (serverPort < 1 || serverPort > 65535) {
+                        System.out.println(" Port invalide. Le port par défaut (8888) sera utilisé.");
+                        serverPort = 8888;
+                    }
+                } catch (NumberFormatException e) {
+                    System.out.println(" Entrée non valide. Le port par défaut (8888) sera utilisé.");
+                    serverPort = 8888;
+                }
+            }
             if (serverIP.isEmpty()) {
                 serverIP = "localhost"; // Default to localhost if no input
             }
 
             //System.out.println("Veuillez entrer l'adresse du serveur : ");
             // Création de la connexion réseau (par défaut : localhost)
-            MyClient = new Socket(serverIP, 8888);
+            MyClient = new Socket(serverIP, serverPort);
 
             // Initialisation des flux de communication
             input = new BufferedInputStream(MyClient.getInputStream());
