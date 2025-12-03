@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.*;
+import java.util.Scanner;
 
 /**
  * Classe Client
@@ -38,7 +39,7 @@ class Client {
     private static Plateau plateau = new Plateau();
 
     /** Adresse IPv4 du serveur (saisie par l’utilisateur). */
-    private static String ipv4 = "";
+    //private static String ipv4 = "";
 
     /**
      * Point d’entrée du programme client.
@@ -49,9 +50,17 @@ class Client {
     public static void main(String[] args) {
 
         try {
-            System.out.println("Veuillez entrer l'adresse du serveur : ");
+            // Demande à l'utilisateur d'entrer l'adresse IP du serveur
+            Scanner scanner = new Scanner(System.in);
+            System.out.print("Entrez l'adresse IP du serveur (par défaut: localhost) : ");
+            String serverIP = scanner.nextLine().trim();
+            if (serverIP.isEmpty()) {
+                serverIP = "localhost"; // Default to localhost if no input
+            }
+
+            //System.out.println("Veuillez entrer l'adresse du serveur : ");
             // Création de la connexion réseau (par défaut : localhost)
-            MyClient = new Socket("localhost", 8888);
+            MyClient = new Socket(serverIP, 8888);
 
             // Initialisation des flux de communication
             input = new BufferedInputStream(MyClient.getInputStream());
